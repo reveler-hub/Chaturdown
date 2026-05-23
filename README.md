@@ -57,7 +57,7 @@ python Chaturdown.py
 
 ### Sharing a venv with other scripts
 
-If you're already running TikTube, DownTube, or TwiDown, you can reuse their venv instead of creating a new one. Open `Chaturdown.py` in a text editor and change the first line (the shebang) to point at your existing venv's Python:
+If you're already running TikTube, DownTube, or TwitDown, you can reuse their venv instead of creating a new one. Open `Chaturdown.py` in a text editor and change the first line (the shebang) to point at your existing venv's Python:
 
 ```
 #!/path/to/your/existing/venv/bin/python3
@@ -108,7 +108,7 @@ All scripts in this suite use the same browser profile for storing logins. If yo
 CAMOUFOX_PROFILE = Path("/your/shared/profile/path")
 ```
 
-See the other scripts in this suite: [TikTube](https://github.com/reveler-hub/TikTube) · [DownTube](https://github.com/reveler-hub/DownTube) · [TwiDown](https://github.com/reveler-hub/TwitDown)
+See the other scripts in this suite: [TikTube](https://github.com/reveler-hub/TikTube) · [DownTube](https://github.com/reveler-hub/DownTube) · [TwitDown](https://github.com/reveler-hub/TwitDown)
 
 ## Usage
 
@@ -231,7 +231,7 @@ tail -f /tmp/chaturdown.log
 tmux new-session -d -s watchers
 tmux new-window -t watchers -n downtube   'python DownTube.py'
 tmux new-window -t watchers -n chaturdown 'python Chaturdown.py'
-tmux new-window -t watchers -n twidown    'python TwiDown.py'
+tmux new-window -t watchers -n TwitDown    'python TwitDown.py'
 tmux attach -t watchers
 # Switch between windows: Ctrl+B then 0, 1, 2
 ```
