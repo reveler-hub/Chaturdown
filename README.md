@@ -105,6 +105,8 @@ This opens a visible Firefox (Camoufox) browser window pointed at the Chaturbate
 Both files must exist before `Chaturdown.py` will start. Re-run `ChaturLogin.py` any time cookies expire or Cloudflare starts blocking requests.
 
 > **Note:** `ChaturLogin.py` opens a real browser window, so it requires a display. On a headless server, use a screen session over RDP or VNC, or forward the display via SSH (`ssh -X`).
+> 
+> **Note:** If the browser closes on its own before the page fully loads, the script has timed out. This can happen on low-powered devices (such as older SBCs) that are slow to render the browser. Simply re-run `./ChaturLogin.py` and it will try again.
 
 ### 5 — Configure
 
