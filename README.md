@@ -76,6 +76,7 @@ Then restart your terminal.
 ```bash
 git clone https://github.com/yourname/chaturdown.git
 cd chaturdown
+chmod +x *
 ```
 
 ### 3 — Run setup
