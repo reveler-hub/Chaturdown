@@ -1,3 +1,4 @@
 requests
-camoufox
 yt-dlp
+camoufox
+playwright==1.58.0
