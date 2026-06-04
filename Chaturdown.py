@@ -45,16 +45,17 @@ CB_USERNAMES = [
 
 VIDEOS_DIR_STR   = "./Videos"
 DOWNLOAD_LOG_STR = "./Chatur_download_logs.txt"
+DOWNLOAD_LOG_STR = "./Chatur_download_logs.txt"
 
-# If yt-dlp is installed globally, leave as "yt-dlp". 
+# If yt-dlp is installed globally, leave as "yt-dlp".
 YTDLP_EXE_STR    = "yt-dlp"
 
 # yt-dlp self-update interval (seconds). 0 = disabled. Default: once per day.
 YTDLP_UPDATE_INTERVAL = 86400
 
 # Polling and Timeout Settings (in seconds)
-POLL_MIN      = 60     
-POLL_MAX      = 120    
+POLL_MIN      = 60
+POLL_MAX      = 120
 STALL_TIMEOUT = 60     # seconds of stdout silence before declaring a stall
 
 # ============================================================
@@ -233,12 +234,12 @@ def _terminate_process(process: subprocess.Popen, reason: str):
 def _next_filename(username: str) -> Path:
     out_folder = VIDEOS_DIR / username
     out_folder.mkdir(parents=True, exist_ok=True)
-    
+
     existing = []
     for f in out_folder.glob(f"{username}_*.mkv"):
         m = re.match(rf"^{re.escape(username)}_(\d+)\.mkv$", f.name)
         if m: existing.append(int(m.group(1)))
-        
+
     next_n = (max(existing) + 1) if existing else 1
     return out_folder / f"{username}_{next_n:03d}.mkv"
 
@@ -246,12 +247,12 @@ def _build_ytdlp_cmd(username: str, output_path: Path) -> list[str]:
     cmd = [
         str(YTDLP_EXE),
         f"https://chaturbate.com/{username}/",
-        "--output", str(output_path),
-        "--user-agent", USER_AGENT,
+        "--output",              str(output_path),
+        "--user-agent",          USER_AGENT,
         "--hls-use-mpegts",
         "--merge-output-format", "mkv",
-        "--fragment-retries", "5",
-        "--retries", "5",
+        "--fragment-retries",    "5",
+        "--retries",             "5",
         "--no-part",
     ]
     if COOKIES_FILE.exists():
@@ -355,6 +356,8 @@ def download_stream(username: str) -> None:
     _log_download(output_path.name)
     SHARED_STATE[username]["target"] = None
 
+
+
 # ============================================================================
 # WATCHER LOOP
 # ============================================================================
@@ -372,7 +375,7 @@ def _is_active(username: str) -> bool:
 
 def _launch(username: str):
     SHARED_STATE[username]["start_t"] = time.time()
-    
+
     def _run():
         try:
             download_stream(username)
@@ -386,7 +389,7 @@ def _launch(username: str):
             SHARED_STATE[username]["status"] = "Offline"
             SHARED_STATE[username]["progress"] = ""
             SHARED_STATE[username]["target"] = None
-        
+
     t = threading.Thread(target=_run, daemon=True)
     with _active_lock: _active[username] = t
     t.start()
