@@ -12,14 +12,11 @@ source Chaturdown_Venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Download Camoufox browser (required for ChaturLogin.py)
-echo "📥 Downloading Camoufox browser (required for login)..."
-python -m camoufox fetch
-
 echo ""
 echo "✅ Setup complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Run ./ChaturLogin.py to log in and generate cookies + user agent"
-echo "  2. Edit the configuration section at the top of Chaturdown.py"
-echo "  3. Run ./Chaturdown.py (or use tmux/screen for background operation)"
+echo "  1. Export your Chaturbate cookies as a Netscape-format .txt file (e.g. via a browser extension)."
+echo "  2. Save it as 'Chaturdown_Cookies.txt' in this folder."
+echo "  3. Edit the configuration section at the top of Chaturdown.py."
+echo "  4. Run ./Chaturdown.py (or use tmux/screen for background operation)."
