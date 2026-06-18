@@ -39,16 +39,15 @@ except ImportError:
 # ============================================================
 
 CB_USERNAMES = [
-    "model_username_1",
-    "model_username_2",
+    "Model_name",
+    "Model_name_2",
 ]
 
 VIDEOS_DIR_STR   = "./Videos"
-DOWNLOAD_LOG_STR = "./Chatur_download_logs.txt"
-DOWNLOAD_LOG_STR = "./Chatur_download_logs.txt"
+DOWNLOAD_LOG_STR = "./Chaturdown_logs.txt"
 
 # If yt-dlp is installed globally, leave as "yt-dlp".
-YTDLP_EXE_STR    = "yt-dlp"
+YTDLP_EXE_STR    = "./Chaturdown_Venv/bin/yt-dlp"
 
 # yt-dlp self-update interval (seconds). 0 = disabled. Default: once per day.
 YTDLP_UPDATE_INTERVAL = 86400
@@ -73,17 +72,6 @@ DOWNLOAD_LOG = resolve_path(DOWNLOAD_LOG_STR)
 YTDLP_EXE    = resolve_path(YTDLP_EXE_STR) if ("/" in YTDLP_EXE_STR or "\\" in YTDLP_EXE_STR) else YTDLP_EXE_STR
 
 COOKIES_FILE = BASE_DIR / "Chaturdown_Cookies.txt"
-UA_TXT       = BASE_DIR / "user_agent.txt"
-
-if UA_TXT.exists():
-    USER_AGENT = UA_TXT.read_text().strip()
-else:
-    print("❌ FATAL: user_agent.txt is missing.")
-    print("   This file is created by running ./ChaturLogin.py")
-    print("   Fix:")
-    print("      1. Run ./ChaturLogin.py to generate fresh cookies and user_agent.txt")
-    print("      2. Re-run Chaturdown.py")
-    sys.exit(1)
 
 VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
 DOWNLOAD_LOG.parent.mkdir(parents=True, exist_ok=True)
@@ -123,7 +111,6 @@ ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 # ============================================================================
 def _cb_session() -> requests.Session:
     session = requests.Session()
-    session.headers["User-Agent"] = USER_AGENT
     if COOKIES_FILE.exists():
         for line in COOKIES_FILE.read_text().splitlines():
             line = line.strip()
@@ -145,7 +132,7 @@ def check_is_live(username: str) -> bool:
         set_api_status("Status: Connected to Chaturbate API")
         return r.json().get("room_status") == "public"
     except ValueError:
-        set_api_status("Status: Cloudflare blocked — run ./ChaturLogin.py to refresh cookies")
+        set_api_status("Status: Cloudflare blocked — replace Chaturdown_Cookies.txt with fresh cookies")
         _STOP.set()
         return False
     except Exception as e:
@@ -248,12 +235,13 @@ def _build_ytdlp_cmd(username: str, output_path: Path) -> list[str]:
         str(YTDLP_EXE),
         f"https://chaturbate.com/{username}/",
         "--output",              str(output_path),
-        "--user-agent",          USER_AGENT,
         "--hls-use-mpegts",
         "--merge-output-format", "mkv",
         "--fragment-retries",    "5",
         "--retries",             "5",
         "--no-part",
+        "--downloader", "ffmpeg",
+        "--downloader-args", "ffmpeg:-fps_mode cfr -af aresample=async=1 -c:v copy -c:a aac -copyts -avoid_negative_ts make_zero",
     ]
     if COOKIES_FILE.exists():
         cmd += ["--cookies", str(COOKIES_FILE)]
@@ -490,15 +478,8 @@ def main():
         sys.exit(1)
 
     if not COOKIES_FILE.exists() or COOKIES_FILE.stat().st_size < 100:
-        print("❌ FATAL: Chaturdown_Cookies.txt is missing or empty.")
-        print()
-        print("   This script cannot run without valid login cookies.")
-        print(f"   Expected location: {COOKIES_FILE}")
-        print()
-        print("Fix:")
-        print("   1. Run ./ChaturLogin.py to generate fresh cookies.")
-        print("   2. Make sure the file is saved as 'Chaturdown_Cookies.txt' in this same folder.")
-        print("   3. Re-run Chaturdown")
+        print("❌ No cookie file for Chaturbate found, please add one to the current folder.")
+        print(f"   Expected: {COOKIES_FILE}")
         sys.exit(1)
 
     watcher_thread = threading.Thread(target=watch_loop, args=(usernames,), daemon=True)
