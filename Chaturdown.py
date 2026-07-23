@@ -11,10 +11,12 @@ Features a clean, interactive Terminal User Interface (TUI) to monitor
 downloads in real-time without scrolling logs.
 
 Errors and crashes surface in the terminal via standard Python tracebacks.
+All connection errors are shown directly in the TUI status bar.
 """
 
 import curses
 import datetime
+import json
 import random
 import re
 import signal
@@ -77,6 +79,25 @@ VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
 DOWNLOAD_LOG.parent.mkdir(parents=True, exist_ok=True)
 
 # ============================================================================
+# ERROR PHRASES (clean user-facing messages)
+# ============================================================================
+ERROR_PHRASES = {
+    "DNS":       "Network/DNS error",
+    "TIMEOUT":   "Connection timeout",
+    "SSL":       "SSL certificate error",
+    "403":       "Forbidden / Cloudflare",
+    "404":       "Username not found",
+    "BAD_JSON":  "Invalid API response (Cloudflare?)",
+    "EMPTY":     "Empty API response",
+    "REQ_ERR":   "Request error",
+    "UNKNOWN":   "Unexpected error",
+}
+
+def get_error_phrase(code: str) -> str:
+    """Return a user-friendly phrase for a given error code."""
+    return ERROR_PHRASES.get(code, f"{code} error")
+
+# ============================================================================
 # TUI SHARED STATE
 # ============================================================================
 SHARED_STATE = {}
@@ -107,7 +128,7 @@ ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
 
 # ============================================================================
-# LIVE DETECTION
+# LIVE DETECTION (with detailed error reporting, no log file)
 # ============================================================================
 def _cb_session() -> requests.Session:
     session = requests.Session()
@@ -122,31 +143,89 @@ def _cb_session() -> requests.Session:
                 session.cookies.set(name, value, domain=domain.lstrip("."), path=path_)
     return session
 
-def check_is_live(username: str) -> bool:
+def check_is_live(username: str) -> tuple[bool, str, str]:
+    """
+    Returns:
+      - live (bool): True if room is public
+      - error_code (str): short error code (e.g. 'DNS', 'TIMEOUT', '403', etc.)
+      - error_msg (str): human-readable message (may be empty if no error)
+    """
     try:
-        r = _cb_session().get(f"https://chaturbate.com/api/chatvideocontext/{username}/", timeout=15)
+        r = _cb_session().get(
+            f"https://chaturbate.com/api/chatvideocontext/{username}/",
+            timeout=15
+        )
         r.raise_for_status()
-        if not r.text.strip():
-            set_api_status("Status: Session may need re-login (empty API response)")
-            return False
-        set_api_status("Status: Connected to Chaturbate API")
-        return r.json().get("room_status") == "public"
-    except ValueError:
-        set_api_status("Status: Cloudflare blocked — replace Chaturdown_Cookies.txt with fresh cookies")
-        _STOP.set()
-        return False
+        # Check if response is valid JSON
+        try:
+            data = r.json()
+        except json.JSONDecodeError:
+            # Often means Cloudflare or a login page
+            preview = r.text[:200].replace('\n', ' ').strip()
+            return False, "BAD_JSON", f"API returned non-JSON (maybe Cloudflare). Preview: {preview}"
+
+        if not data:  # empty dict
+            return False, "EMPTY", "API response was empty — session may be expired."
+
+        room_status = data.get("room_status")
+        if room_status == "public":
+            return True, "", ""
+        else:
+            # room may be offline, private, etc. – not an error, just not public
+            return False, "", ""
+
+    except requests.exceptions.ConnectionError:
+        return False, "DNS", "Network unreachable (DNS/connection) — check internet/firewall."
+    except requests.exceptions.Timeout:
+        return False, "TIMEOUT", "Request timed out after 15s — Chaturbate may be slow or unreachable."
+    except requests.exceptions.SSLError:
+        return False, "SSL", "SSL certificate verification failed. Update CA certs or check proxy."
+    except requests.exceptions.HTTPError as e:
+        status = e.response.status_code
+        if status == 403:
+            return False, "403", "HTTP 403 Forbidden — Cloudflare blocking or cookies invalid. Export fresh cookies."
+        elif status == 404:
+            return False, "404", f"HTTP 404 Not Found — username '{username}' may be incorrect or deleted."
+        else:
+            return False, f"HTTP{status}", f"HTTP error {status} — check network or try re-login."
+    except requests.exceptions.RequestException as e:
+        return False, "REQ_ERR", f"Requests error: {str(e)[:100]}"
     except Exception as e:
-        set_api_status("Status: Unable to connect, check connection or try re-logging back in.")
-        return False
+        return False, "UNKNOWN", f"Unexpected error: {str(e)[:100]}"
+
 
 def check_all_users(usernames: list[str]) -> list[str]:
+    """Returns list of usernames that are currently live.
+    Also updates SHARED_STATE with error info for each user.
+    """
     live: list[str] = []
     lock = threading.Lock()
 
     def _check(u):
-        if check_is_live(u):
+        is_live, err_code, err_msg = check_is_live(u)
+        state = SHARED_STATE.setdefault(u, {})
+        if err_code:
+            # Store the error details
+            state["error_code"] = err_code
+            state["error_msg"] = err_msg
+            state["last_error_time"] = time.time()
+            state["consecutive_failures"] = state.get("consecutive_failures", 0) + 1
+        else:
+            # Successful check – reset failure count
+            state["error_code"] = ""
+            state["error_msg"] = ""
+            state["consecutive_failures"] = 0
+
+        if is_live:
             with lock:
                 live.append(u)
+
+        # Update global API_STATUS with a clean message
+        if err_code:
+            phrase = get_error_phrase(err_code)
+            set_api_status(f"Status: ⚠️ {phrase}")
+        else:
+            set_api_status("Status: Connected to Chaturbate API")
 
     threads = [threading.Thread(target=_check, args=(u,)) for u in usernames if u]
     for t in threads: t.start()
@@ -191,6 +270,8 @@ class StallWatchdog:
             if self.process.poll() is not None: return
             if silence > STALL_TIMEOUT:
                 set_api_status("Status: Stall detected — download stopped")
+                # Print to stderr so it's visible in terminal scrollback
+                print(f"⚠️ Stall detected for {self.target_file.stem} — terminating yt-dlp", file=sys.stderr)
                 _terminate_process(self.process, "Stall detected")
                 return
 
@@ -323,12 +404,14 @@ def download_stream(username: str) -> None:
 
             if "giving up after" in clean_line.lower() or "unable to download" in clean_line.lower():
                 set_api_status(f"Status: Stream error for {username}")
+                print(f"⚠️ Stream error for {username}: {clean_line}", file=sys.stderr)
                 watchdog.stop()
                 _terminate_process(process, "Stream ended")
                 break
 
     except KeyboardInterrupt:
         set_api_status(f"Status: Interrupted while downloading {username}")
+        print(f"⚠️ Download interrupted by user for {username}", file=sys.stderr)
         _terminate_process(process, "User interrupt")
         watchdog.stop()
         SHARED_STATE[username]["target"] = None
@@ -340,10 +423,10 @@ def download_stream(username: str) -> None:
 
     if process.returncode != 0:
         set_api_status(f"Status: yt-dlp failed for {username} (code {process.returncode})")
+        print(f"⚠️ yt-dlp failed for {username} with return code {process.returncode}", file=sys.stderr)
 
     _log_download(output_path.name)
     SHARED_STATE[username]["target"] = None
-
 
 
 # ============================================================================
@@ -363,6 +446,9 @@ def _is_active(username: str) -> bool:
 
 def _launch(username: str):
     SHARED_STATE[username]["start_t"] = time.time()
+    # Clear any leftover error when a download starts
+    SHARED_STATE[username]["error_code"] = ""
+    SHARED_STATE[username]["error_msg"] = ""
 
     def _run():
         try:
@@ -422,7 +508,16 @@ def draw_dashboard(stdscr):
 
     for u in CB_USERNAMES:
         if u not in SHARED_STATE:
-            SHARED_STATE[u] = {"status": "Offline", "progress": "", "start_t": time.time(), "target": None}
+            SHARED_STATE[u] = {
+                "status": "Offline",
+                "progress": "",
+                "start_t": time.time(),
+                "target": None,
+                "error_code": "",
+                "error_msg": "",
+                "consecutive_failures": 0,
+                "last_error_time": 0
+            }
 
     while not _STOP.is_set():
         max_y, max_x = stdscr.getmaxyx()
@@ -450,15 +545,22 @@ def draw_dashboard(stdscr):
                     size_str = format_size(size_b).rjust(8)
                     line = f"🟢 {name_pad} | Online  | ⏱️ {t_str} | 💾 {size_str}"
                 else:
-                    line = f"🔴 {name_pad} | Offline"
+                    # Offline: show error icon if there's a recent error
+                    err_code = s.get("error_code", "")
+                    if err_code:
+                        line = f"🔴 {name_pad} | ⚠️ {err_code[:8]}"
+                    else:
+                        line = f"🔴 {name_pad} | Offline"
 
                 stdscr.addstr(row, 4, line[:max_x-6])
                 row += 1
 
             stdscr.addstr(row + 1, 4, "─" * (max_x - 8))
 
-            stdscr.addstr(max_y - 2, 4, API_STATUS[:max_x-6], curses.A_BOLD)
-            stdscr.addstr(max_y - 1, 4, "Press 'q' to stop the script.", curses.A_DIM)
+            # Show API status
+            status_line = API_STATUS[:max_x-6]
+            stdscr.addstr(max_y - 2, 4, status_line, curses.A_BOLD)
+            stdscr.addstr(max_y - 1, 4, "Press 'q' to stop", curses.A_DIM)
 
         except curses.error:
             pass # Ignore render errors caused by dragging/resizing terminal window
@@ -467,6 +569,23 @@ def draw_dashboard(stdscr):
         if key == ord('q') or key == ord('Q'):
             _STOP.set()
             break
+
+# ============================================================================
+# STARTUP CHECK (no log file, prints once to terminal)
+# ============================================================================
+def perform_startup_check(usernames: list[str]) -> tuple[bool, str]:
+    """
+    Checks if the API is reachable for all usernames.
+    Returns (ok, error_message).
+    If any error other than 404 occurs, returns False with a message.
+    If all errors are 404 or no errors, returns True.
+    """
+    for u in usernames:
+        _, err_code, err_msg = check_is_live(u)
+        if err_code and err_code != "404":
+            phrase = get_error_phrase(err_code)
+            return False, f"Cannot connect to Chaturbate API: {phrase} — {err_msg}"
+    return True, ""
 
 # ============================================================================
 # EXECUTION
@@ -482,9 +601,17 @@ def main():
         print(f"   Expected: {COOKIES_FILE}")
         sys.exit(1)
 
+    # Pre-flight check: ensure API is reachable (ignore 404s)
+    ok, msg = perform_startup_check(usernames)
+    if not ok:
+        print(f"❌ {msg}")
+        sys.exit(1)
+
+    # All good – launch the TUI
     watcher_thread = threading.Thread(target=watch_loop, args=(usernames,), daemon=True)
     watcher_thread.start()
 
+    # Start the TUI – no goodbye message after exit
     curses.wrapper(draw_dashboard)
 
 if __name__ == "__main__":
@@ -492,6 +619,7 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         _STOP.set()
+        pass
     except Exception:
         try:
             curses.endwin()
@@ -500,5 +628,3 @@ if __name__ == "__main__":
         print("\n💥 The script encountered an unexpected error.")
         print("   A full traceback should appear above (or in your terminal scrollback).")
         raise
-    finally:
-        print("\n👋 TUI Closed. Terminal restored cleanly!")
