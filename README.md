@@ -17,6 +17,7 @@ Monitors multiple Chaturbate rooms simultaneously and automatically records any 
 - Sequential per-room file numbering (`username_001.mkv`, `username_002.mkv`, …)
 - Download log with automatic 2-day pruning
 - Automatic yt-dlp self-update (configurable interval)
+- Debugging messages
 
 ---
 
