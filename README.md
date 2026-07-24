@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/29078801/README.md)
 # Chaturdown
 
 Monitors multiple Chaturbate rooms simultaneously and automatically records any that go live. Designed for always-on use on servers, SBCs (Raspberry Pi, etc.), or any machine that runs in the background. A real-time curses TUI shows Online/Offline status, recording duration, and live file size per room.
