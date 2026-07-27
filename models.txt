@@ -1,0 +1,18 @@
+# One Chaturbate username per line.
+# Blank lines and lines starting with # are ignored.
+#
+# This file is checked for changes automatically — no restart needed.
+#
+# Optional: set how often (in seconds) this file itself is re-checked.
+# If omitted, the script's DEFAULT_MODELS_RELOAD_INTERVAL is used (120s / 2 min).
+# You can change this value later too — it takes effect on the next check.
+interval=120
+
+# Optional: true/false. If true, removing a username from this list
+# immediately stops their in-progress download on the next check.
+# If false (default), a removed username's active download is left to
+# finish naturally instead of being cut off.
+stop_removed=false
+
+model_name
+model_name_2
