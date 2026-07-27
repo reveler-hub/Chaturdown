@@ -4,11 +4,17 @@ exec "$(dirname "$0")/Chaturdown_Venv/bin/python3" "$0" "$@"
 ":"""
 
 """
-Chaturdown — Chaturbate Multi-User Watcher & Downloader (TUI Edition)
+Chaturdown (Proxy/UA Edition) — Chaturbate Multi-User Watcher & Downloader (TUI)
 -------------------------------------------------------------------------
 Polls multiple Chaturbate usernames via the public API.
 Features a clean, interactive Terminal User Interface (TUI) to monitor
 downloads in real-time without scrolling logs.
+
+This version adds optional PROXY and USER_AGENT settings (see the
+CONFIGURATION section below) for setups where Chaturbate/Cloudflare
+blocks a plain connection — e.g. behind certain VPNs/proxies, or in
+regions where requests need to look like they're coming from a real
+browser session.
 
 Errors and crashes surface in the terminal via standard Python tracebacks.
 All connection errors are shown directly in the TUI status bar.
@@ -64,6 +70,30 @@ POLL_MAX      = 120
 STALL_TIMEOUT = 60     # seconds of stdout silence before declaring a stall
 
 # ============================================================
+# PROXY / USER-AGENT (optional — leave both blank if you don't need them)
+# ============================================================
+# If Chaturbate blocks your connection (a 403 error, "Cloudflare blocked",
+# etc.) even with valid cookies, it's often because your IP/network looks
+# suspicious to Cloudflare (VPN, proxy, certain regions), or because
+# requests are missing a real browser's User-Agent. Setting both of these
+# to match an actual browser session usually fixes it.
+#
+# PROXY: your local proxy address, if you use one. Leave as "" to disable.
+#   Examples: "http://127.0.0.1:8080"  or  "socks5://127.0.0.1:1080"
+PROXY = ""
+
+# USER_AGENT: a real browser's User-Agent string. Leave as "" to disable.
+# For best results, use the exact browser you used to export your cookies —
+# Cloudflare can tie your session to it.
+#
+# To find your current browser's User-Agent, use EITHER of these:
+#   1. Google: search "what is my user agent" — copy the result from the
+#      AI-generated answer box at the top.
+#   2. Visit https://whatsmyua.info/ — it's shown right at the top, under
+#      "Enter a user-agent string:".
+USER_AGENT = ""
+
+# ============================================================
 # END OF CONFIGURATION
 # ============================================================
 
@@ -84,21 +114,6 @@ _INTERVAL_LINE_RE = re.compile(r"^interval\s*=\s*(\d+)\s*$", re.IGNORECASE)
 _STOP_REMOVED_LINE_RE = re.compile(r"^stop_removed\s*=\s*(true|false)\s*$", re.IGNORECASE)
 
 def load_models_file(path: Path, default_interval: int, default_stop_removed: bool = False) -> tuple[list[str], int, bool]:
-    """Read usernames and optional settings from the models file.
-
-    Format: one username per line. Blank lines, lines starting with #, and
-    anything after a # on any line (inline comments) are ignored.
-      - 'interval=90' sets how often (in seconds) this file itself is
-        re-checked for changes — if omitted, default_interval is used.
-      - 'stop_removed=true' immediately stops an in-progress download for
-        any username removed from the file. If omitted or 'false', a
-        removed username's download is left to finish naturally instead.
-
-    Returns (usernames, interval_seconds, stop_removed). usernames is an
-    empty list if the file is missing, empty, or unreadable — the caller
-    decides what to do with that (this script requires at least one
-    username to run).
-    """
     if not path.exists():
         return [], default_interval, default_stop_removed
 
@@ -196,6 +211,10 @@ def _cb_session() -> requests.Session:
             if len(parts) >= 7:
                 domain, _, path_, _, _, name, value = parts[:7]
                 session.cookies.set(name, value, domain=domain.lstrip("."), path=path_)
+    if USER_AGENT:
+        session.headers["User-Agent"] = USER_AGENT
+    if PROXY:
+        session.proxies.update({"http": PROXY, "https": PROXY})
     return session
 
 def check_is_live(username: str) -> tuple[bool, str, str]:
@@ -381,6 +400,10 @@ def _build_ytdlp_cmd(username: str, output_path: Path) -> list[str]:
     ]
     if COOKIES_FILE.exists():
         cmd += ["--cookies", str(COOKIES_FILE)]
+    if USER_AGENT:
+        cmd += ["--user-agent", USER_AGENT]
+    if PROXY:
+        cmd += ["--proxy", PROXY]
     return cmd
 
 def _maybe_update_yt_dlp():
