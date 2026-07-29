@@ -27,6 +27,7 @@ Monitors multiple Chaturbate rooms simultaneously and automatically records any 
 - Python 3.10+
 - `ffmpeg` — must be installed as a system package (see below)
 - All Python dependencies are installed into the venv by `setup.sh`
+- **Linux or macOS.** Chaturdown's TUI relies on `curses` and its launcher uses a bash-based shebang, neither of which work natively on Windows. On Windows, run it inside **WSL** (Windows Subsystem for Linux) and follow the Ubuntu/Debian instructions below.
 
 ---
 
