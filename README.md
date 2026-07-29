@@ -96,7 +96,7 @@ If Cloudflare ever starts blocking requests, simply export fresh cookies from yo
 
 ### 5 — Add your models
 
-Create a `models.txt` file in the same folder as `Chaturdown.py`, one username per line:
+Edit `models.txt` file in the same folder as `Chaturdown.py`, one username per line:
 
 ```
 model_username_1
