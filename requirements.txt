@@ -1,2 +1,3 @@
 requests
 yt-dlp
+windows-curses; sys_platform == "win32"
