@@ -2,7 +2,13 @@
 
 Monitors multiple Chaturbate rooms simultaneously and automatically records any that go live. Designed for always-on use on servers, SBCs (Raspberry Pi, etc.), or any machine that runs in the background. A real-time curses TUI shows Online/Offline status, recording duration, and live file size per room.
 
+## Linux/MacOs:
+
 <img width="872" height="575" alt="Chaturdown_Screenshot" src="https://github.com/user-attachments/assets/c510fb94-d338-48b9-a384-90bed65b0765" />
+
+## Windows:
+
+<img width="1075" height="564" alt="Chaturdown_Windows" src="https://github.com/user-attachments/assets/c9f156b4-b6f5-4a2e-9964-29016cf0539b" />
 
 
 ---
@@ -14,7 +20,7 @@ Monitors multiple Chaturbate rooms simultaneously and automatically records any 
 - Optional proxy and User-Agent support for connections that Chaturbate/Cloudflare would otherwise block
 - Spawns a separate download thread per room — multiple streams record simultaneously
 - Real-time TUI: Online/Offline status, recording duration, and live file size
-- Stall detection: sends SIGINT to gracefully stop a hung yt-dlp process
+- Stall detection: gracefully stops a hung yt-dlp process (SIGINT on Linux/macOS, Ctrl+Break on Windows)
 - Sequential per-room file numbering (`username_001.mkv`, `username_002.mkv`, …)
 - Download log with automatic 2-day pruning
 - Automatic yt-dlp self-update (configurable interval)
@@ -26,63 +32,87 @@ Monitors multiple Chaturbate rooms simultaneously and automatically records any 
 
 - Python 3.10+
 - `ffmpeg` — must be installed as a system package (see below)
-- All Python dependencies are installed into the venv by `setup.sh`
-- **Linux or macOS.** Chaturdown's TUI relies on `curses` and its launcher uses a bash-based shebang, neither of which work natively on Windows. On Windows, run it inside **WSL** (Windows Subsystem for Linux) and follow the Ubuntu/Debian instructions below.
+- All Python dependencies are installed into the venv automatically by the setup script for your OS
+- **Runs natively on Linux, macOS, and Windows** — no WSL needed. On Windows, `curses` is provided by the `windows-curses` package (installed automatically by `setup_windows.bat`), and `Chaturdown.py` can be launched by double-clicking it once setup has run.
 
 ---
 
 ## Installation
 
-### 1 — Install system dependencies
+### Windows
 
-Installs Python and ffmpeg together. ffmpeg is a binary and cannot be installed into a venv — it must be a system package, or yt-dlp cannot mux audio and video.
+1. **Install Python**, if you don't already have it: [python.org/downloads](https://www.python.org/downloads/)
 
-```bash
-# Ubuntu / Debian
-sudo apt install python3 python3-pip python3-venv ffmpeg git
+   > **Important:** on the first screen of the installer, tick **"Add python.exe to PATH"** before clicking Install — it's off by default on some versions. If you already installed Python without it, re-run the installer, choose "Modify", and enable it from there.
 
-# Arch
-sudo pacman -Syu python python-pip ffmpeg git
+2. **Install ffmpeg** (a binary, not a pip package — yt-dlp needs it on PATH to mux audio and video):
+   ```
+   winget install ffmpeg
+   ```
+   Run that from a terminal (PowerShell or Command Prompt). Afterward, **close and reopen** any terminal windows before running Chaturdown — Windows won't recognize the new install in a window that was already open.
 
-# Fedora
-sudo dnf install python3 python3-pip python3-venv ffmpeg git
+3. **Download this project** (green "Code" button → "Download ZIP" if you're not using git) and unzip it somewhere, or:
+   ```
+   git clone https://github.com/reveler-hub/chaturdown.git
+   cd chaturdown
+   ```
 
-# macOS
-brew install python ffmpeg
-```
+4. **Run `setup_windows.bat`** — double-click it, or run it from a terminal in that folder. It creates the `Chaturdown_Venv\` virtual environment and installs all Python dependencies (`requests`, `yt-dlp`, `windows-curses`) into it.
 
-Verify ffmpeg installed correctly: `ffmpeg -version`
+5. Continue with [Add cookies](#add-cookies) below.
 
-#### Fix missing emoji (tofu squares □□□)
+### macOS / Linux
 
-If the TUI shows blank boxes instead of emoji, install Nerd Font emoji support:
+1. **Install system dependencies** — installs Python and ffmpeg together. ffmpeg is a binary and cannot be installed into a venv — it must be a system package, or yt-dlp cannot mux audio and video.
 
-```bash
-sudo apt install fonts-noto-color-emoji
-fc-cache -fv
-```
+   ```bash
+   # Ubuntu / Debian
+   sudo apt install python3 python3-pip python3-venv ffmpeg git
 
-Then restart your terminal.
+   # Arch
+   sudo pacman -Syu python python-pip ffmpeg git
 
-### 2 — Clone the repository
+   # Fedora
+   sudo dnf install python3 python3-pip python3-venv ffmpeg git
 
-```bash
-git clone https://github.com/reveler-hub/chaturdown.git
-cd chaturdown
-chmod +x *
-```
+   # macOS
+   brew install python ffmpeg
+   ```
 
-### 3 — Run setup
+   Verify ffmpeg installed correctly: `ffmpeg -version`
 
-```bash
-./setup.sh
-```
+   #### Fix missing emoji (tofu squares □□□)
 
-`setup.sh` will:
-- Create the `Chaturdown_Venv/` virtual environment
-- Install all Python dependencies (`requests`, `yt-dlp`) into the venv
+   If the TUI shows blank boxes instead of emoji, install Nerd Font emoji support:
 
-### 4 — Add cookies
+   ```bash
+   sudo apt install fonts-noto-color-emoji
+   fc-cache -fv
+   ```
+
+   Then restart your terminal.
+
+2. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/reveler-hub/chaturdown.git
+   cd chaturdown
+   chmod +x *
+   ```
+
+3. **Run setup**
+
+   ```bash
+   ./setup.sh
+   ```
+
+   `setup.sh` will:
+   - Create the `Chaturdown_Venv/` virtual environment
+   - Install all Python dependencies (`requests`, `yt-dlp`) into the venv
+
+4. Continue with [Add cookies](#add-cookies) below.
+
+### Add cookies
 
 Chaturdown requires a Netscape-format cookies file to authenticate with Chaturbate. Export this from your browser after logging in to Chaturbate:
 
@@ -94,9 +124,9 @@ https://addons.mozilla.org/en-US/firefox/addon/get-cookies-txt-locally/ (Firefox
 
 If Cloudflare ever starts blocking requests, simply export fresh cookies from your browser and replace the file — no restart needed on the next poll cycle.
 
-### 5 — Add your models
+### Add your models
 
-Edit `models.txt` file in the same folder as `Chaturdown.py`, one username per line:
+Create a `models.txt` file in the same folder as `Chaturdown.py`, one username per line:
 
 ```
 model_username_1
@@ -105,14 +135,13 @@ model_username_2
 
 Blank lines and lines starting with `#` are ignored. This file is checked automatically for changes — add or remove usernames anytime and Chaturdown picks them up without a restart. See [Live Model List](#live-model-list) below for details, including how to change the check frequency.
 
-### 6 — Configure
+### Configure
 
 Open `Chaturdown.py` and edit the configuration block near the top if you want to change any defaults:
 
 ```python
 VIDEOS_DIR_STR                  = "./Videos"
 DOWNLOAD_LOG_STR                = "./Chaturdown_logs.txt"
-YTDLP_EXE_STR                   = "yt-dlp"
 YTDLP_UPDATE_INTERVAL           = 86400  # seconds between yt-dlp self-updates (0 = disabled)
 DEFAULT_MODELS_RELOAD_INTERVAL  = 120    # used if models.txt doesn't set its own interval=
 
@@ -121,6 +150,8 @@ POLL_MAX      = 120   # maximum seconds between live checks
 STALL_TIMEOUT = 60    # seconds of yt-dlp silence before declaring a stall
 ```
 
+(yt-dlp itself doesn't need configuring — Chaturdown finds it automatically: the copy installed into `Chaturdown_Venv` by setup, or a global install on PATH otherwise.)
+
 ---
 
 ## Usage
@@ -128,6 +159,8 @@ STALL_TIMEOUT = 60    # seconds of yt-dlp silence before declaring a stall
 ```bash
 ./Chaturdown.py
 ```
+
+On Windows, just double-click `Chaturdown.py` instead (it automatically relaunches itself under `Chaturdown_Venv`'s own Python).
 
 The TUI launches immediately:
 
@@ -230,6 +263,12 @@ screen -S chaturdown
 screen -r chaturdown
 ```
 
+### Windows
+
+There's no native tmux/screen equivalent on Windows. Just launch Chaturdown normally (double-click `Chaturdown.py`, or run `Chaturdown_Venv\Scripts\python.exe Chaturdown.py`) and **minimize the console window** instead of closing it — it keeps running in the background while you're logged in.
+
+Note this isn't a true detach: closing that window, logging off, or rebooting stops it, unlike tmux/screen. If you specifically want real detach/reattach, run Chaturdown inside **WSL** (Windows Subsystem for Linux) instead and follow the tmux/screen instructions above — WSL is a real Linux environment, so both work normally there.
+
 ---
 
 ## Output Structure
@@ -238,7 +277,8 @@ screen -r chaturdown
 chaturdown/
 ├── Chaturdown.py
 |── Chaturdown_Venv
-├── setup.sh
+├── setup.sh                     # Linux/macOS setup
+├── setup_windows.bat             # Windows setup
 ├── requirements.txt
 ├── models.txt                   # usernames to watch, checked automatically for changes
 ├── Chaturdown_Cookies.txt       # your exported browser cookies
@@ -255,7 +295,7 @@ chaturdown/
 
 ## Troubleshooting
 
-**`❌ No cookie file for Chaturbate found`** — Export your Chaturbate cookies from your browser and save them as `Chaturdown_Cookies.txt` in the same folder as the script (see Step 4 above).
+**`❌ No cookie file for Chaturbate found`** — Export your Chaturbate cookies from your browser and save them as `Chaturdown_Cookies.txt` in the same folder as the script (see [Add cookies](#add-cookies) above).
 
 **`❌ Error: No usernames found`** — Add at least one Chaturbate username to `models.txt`, one per line (see [Live Model List](#live-model-list)).
 
@@ -265,9 +305,9 @@ chaturdown/
 
 **TUI shows blank squares instead of emoji** — Run `sudo apt install fonts-noto-color-emoji && fc-cache -fv`, then restart your terminal.
 
-**`ffmpeg not found` or no audio in recordings** — ffmpeg must be a system package, not a pip install. Install it with your OS's package manager (see [Install system dependencies](#1--install-system-dependencies)) and verify with `ffmpeg -version`.
+**`ffmpeg not found` or no audio in recordings** — ffmpeg must be a system package, not a pip install. Install it with your OS's package manager (see [Installation](#installation)) and verify with `ffmpeg -version`.
 
-**Downloads stall immediately** — yt-dlp may be outdated. Activate the venv (`source Chaturdown_Venv/bin/activate`) and run `pip install --upgrade yt-dlp`. Alternatively, set `YTDLP_UPDATE_INTERVAL` in the config to have Chaturdown handle this automatically.
+**Downloads stall immediately** — yt-dlp may be outdated. On Linux/macOS, activate the venv (`source Chaturdown_Venv/bin/activate`) and run `pip install --upgrade yt-dlp`; on Windows, run `Chaturdown_Venv\Scripts\pip install --upgrade yt-dlp`. Alternatively, set `YTDLP_UPDATE_INTERVAL` in the config to have Chaturdown handle this automatically.
 
 ---
 
