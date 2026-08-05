@@ -16,6 +16,3 @@ Videos/
 # OS cruft
 .DS_Store
 Thumbs.db
-
-# Local Claude Code settings (machine-specific)
-.claude/settings.local.json
