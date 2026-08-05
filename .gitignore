@@ -1,0 +1,21 @@
+# Virtual environment (created by setup.sh / setup_windows.bat)
+Chaturdown_Venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Sensitive / user-specific — never commit real session cookies
+Chaturdown_Cookies.txt
+
+# Generated at runtime
+Chaturdown_logs.txt
+.last_yt_dlp_update
+Videos/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Local Claude Code settings (machine-specific)
+.claude/settings.local.json
