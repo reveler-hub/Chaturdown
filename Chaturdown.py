@@ -257,7 +257,7 @@ ENABLE_NETWORK_LOG = False
 # END OF CONFIGURATION
 # ============================================================
 
-SCRIPT_VERSION = "V4"
+SCRIPT_VERSION = "V5"
 _GITHUB_RELEASES_API = "https://api.github.com/repos/reveler-hub/Chaturdown/releases/latest"
 
 BASE_DIR = Path(__file__).resolve().parent
