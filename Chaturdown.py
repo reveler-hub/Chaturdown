@@ -219,6 +219,7 @@ SPEED_SAMPLE_INTERVAL = 2      # seconds between speed re-samples; only used if 
 # NATIVE FETCHER (optional, experimental — leave False unless you know you
 # want it)
 # ============================================================
+# Details: https://github.com/reveler-hub/Chaturdown/wiki/Advanced-Mode#fixing-fragmented-recordings-on-flaky-connections
 # Replaces ffmpeg's own HLS fetching (input side only) with native_fetch.py,
 # a purpose-built fetcher that uses the CDN's LL-HLS blocking-reload
 # directive — confirmed live that ffmpeg's own demuxer never uses this
@@ -257,7 +258,7 @@ ENABLE_NETWORK_LOG = False
 # END OF CONFIGURATION
 # ============================================================
 
-SCRIPT_VERSION = "V5"
+SCRIPT_VERSION = "V5.1"
 _GITHUB_RELEASES_API = "https://api.github.com/repos/reveler-hub/Chaturdown/releases/latest"
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -692,6 +693,17 @@ def _move_completed(output_path: Path, username: str) -> None:
         shutil.move(str(output_path), str(dest))
     except Exception as e:
         print(f"⚠️ Failed to move {output_path.name} → {dest}: {e}", file=sys.stderr)
+        return
+
+    # The per-username VIDEOS_DIR folder is recreated automatically by
+    # _next_filename() the next time this model records, so there's
+    # nothing lost by removing it now if this was its last file — just
+    # one less permanently-empty folder to clean up by hand for anyone
+    # watching a lot of models with MOVED_DIR set.
+    try:
+        output_path.parent.rmdir()
+    except OSError:
+        pass  # not empty, or already gone -- either way, nothing to do
 
 # ============================================================================
 # DOWNLOAD WATCHDOG (stall / duration / size / low-disk)
