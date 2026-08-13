@@ -8,11 +8,13 @@ Monitors multiple Chaturbate rooms simultaneously and automatically records any 
 
 ## Linux/MacOs:
 
-<img width="872" height="575" alt="Chaturdown_Screenshot" src="https://github.com/user-attachments/assets/c510fb94-d338-48b9-a384-90bed65b0765" />
+<img width="1887" height="918" alt="Linux_TUI" src="https://github.com/user-attachments/assets/1d815fb1-b201-4f26-958c-b77f83ba1bcc" />
 
 ## Windows:
 
-<img width="1075" height="564" alt="Chaturdown_Windows" src="https://github.com/user-attachments/assets/c9f156b4-b6f5-4a2e-9964-29016cf0539b" />
+<img width="1908" height="914" alt="Windows_TUI" src="https://github.com/user-attachments/assets/38617f78-98e0-4380-aa24-4a7e530869a8" />
+
+
 
 
 ---
@@ -181,26 +183,14 @@ On Windows, just double-click `Chaturdown.py` instead (it automatically relaunch
 
 The TUI launches immediately:
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                                                              │
-│  📡 CHATURBATE MULTI-DOWNLOADER TUI                          │
-│  ────────────────────────────────────────────────────────    │
-│                                                              │
-│  🟢 model_username_1  | Online  | ⏱️ 01:23:45 | 💾  1.2 GB   │
-│  🔴 model_username_2  | Offline                              │
-│                                                              │
-│  ────────────────────────────────────────────────────────    │
-│  Status: Connected to Chaturbate API                         │
-│  Press 'q' to stop the script.                               │
-└──────────────────────────────────────────────────────────────┘
-```
+<img width="786" height="441" alt="TUI_small" src="https://github.com/user-attachments/assets/c49b57e6-89e9-4ded-8dff-1dc409651d0e" />
+
 
 (On Windows this looks slightly different — plain-text labels like `Time:`/`Size:` and a colored `●` instead of emoji, since Windows' terminal support can't render most of them. Functionally identical either way; see the Windows screenshot above.)
 
 The mockup above is the single-column view (a narrow terminal, or a small `models.txt`). On a wide enough terminal, rooms automatically arrange into multiple side-by-side columns instead — no configuration needed, it just uses however much width is available. If a list is large enough to still overflow every column, a `(+N more not shown)` note appears in the footer rather than quietly dropping them.
 
-<img width="1885" height="914" alt="Multi_Column" src="https://github.com/user-attachments/assets/653c7c42-5b1a-4a79-abb4-f41eae944965" />
+<img width="1887" height="918" alt="Linux_TUI" src="https://github.com/user-attachments/assets/1d815fb1-b201-4f26-958c-b77f83ba1bcc" />
 
 Press `q` to stop all downloads and exit.
 
