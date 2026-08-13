@@ -257,6 +257,7 @@ chaturdown/
 ├── models.txt                   # usernames to watch, checked automatically for changes
 ├── Chaturdown_Cookies.txt       # your exported browser cookies
 ├── Chaturdown_logs.txt     # rolling 2-day download history
+├── native_fetch.py        # doesn't work on Windows
 └── Videos/
     ├── model_username_1/
     │   ├── model_username_1_001.mkv
