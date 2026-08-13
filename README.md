@@ -2,6 +2,10 @@
 
 Monitors multiple Chaturbate rooms simultaneously and automatically records any that go live. Designed for always-on use on servers, SBCs (Raspberry Pi, etc.), or any machine that runs in the background. A real-time curses TUI shows Online/Offline status, recording duration, and live file size per room.
 
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License](https://img.shields.io/badge/license-GPL--3.0-green)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey)
+
 ## Linux/MacOs:
 
 <img width="872" height="575" alt="Chaturdown_Screenshot" src="https://github.com/user-attachments/assets/c510fb94-d338-48b9-a384-90bed65b0765" />
@@ -17,13 +21,15 @@ Monitors multiple Chaturbate rooms simultaneously and automatically records any 
 
 - Polls multiple rooms in parallel via the Chaturbate public API
 - Usernames live in `models.txt` and are re-checked automatically — add or remove rooms without restarting
-- Optional proxy and User-Agent support for connections that Chaturbate/Cloudflare would otherwise block
+- Sends a matching User-Agent (required to pass Chaturbate/Cloudflare's bot checks), with optional proxy support
 - Spawns a separate download thread per room — multiple streams record simultaneously
 - Real-time TUI: Online/Offline status, recording duration, and live file size
+- Dashboard auto-arranges into multiple side-by-side columns on a wide enough terminal instead of one tall list that runs out of room — scales much better to watching hundreds of rooms at once, and says so if any still don't fit
 - Stall detection: gracefully stops a hung yt-dlp process (SIGINT on Linux/macOS, Ctrl+Break on Windows)
-- Sequential per-room file numbering (`username_001.mkv`, `username_002.mkv`, …)
+- Sequential per-room file numbering (`username_001.mkv`, `username_002.mkv`, …) or the naming can be manually set
 - Download log with automatic 2-day pruning
 - Automatic yt-dlp self-update (configurable interval)
+- Checks GitHub for new Chaturdown releases on startup and lets you know — one prompt to permanently silence it if you don't want it
 - Debugging messages
 
 ---
@@ -59,7 +65,7 @@ Monitors multiple Chaturbate rooms simultaneously and automatically records any 
 
 4. **Run `setup_windows.bat`** — double-click it, or run it from a terminal in that folder. It creates the `Chaturdown_Venv\` virtual environment and installs all Python dependencies (`requests`, `yt-dlp`, `windows-curses`) into it.
 
-5. Continue with [Add cookies](#add-cookies) below.
+5. Continue with [Add cookies and set your User-Agent](#add-cookies-and-set-your-user-agent) below.
 
 ### macOS / Linux
 
@@ -110,19 +116,28 @@ Monitors multiple Chaturbate rooms simultaneously and automatically records any 
    - Create the `Chaturdown_Venv/` virtual environment
    - Install all Python dependencies (`requests`, `yt-dlp`) into the venv
 
-4. Continue with [Add cookies](#add-cookies) below.
+4. Continue with [Add cookies and set your User-Agent](#add-cookies-and-set-your-user-agent) below.
 
-### Add cookies
+### Add cookies and set your User-Agent
 
-Chaturdown requires a Netscape-format cookies file to authenticate with Chaturbate. Export this from your browser after logging in to Chaturbate:
+Chaturdown requires a Netscape-format cookies file to authenticate with Chaturbate, **and** a matching User-Agent — both are required, not optional. Chaturbate's Cloudflare protection ties your session to the specific browser that exported the cookies, and will block every request with a `403 Forbidden` error if the User-Agent doesn't match, even with valid, freshly-exported cookies.
 
-1. Install a browser extension such as [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) (Chrome)
+1. Install a browser extension such as [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) (Chrome) or
 https://addons.mozilla.org/en-US/firefox/addon/get-cookies-txt-locally/ (Firefox)
 2. Navigate to `chaturbate.com` while logged in
 3. Use the extension to export cookies for the current site
 4. Save the file as `Chaturdown_Cookies.txt` in the same folder as `Chaturdown.py`
+5. Get that **same browser's** User-Agent string — either:
+   - Google: search **"what is my user agent"** and copy the string from under the AI-generated answer.
+   - Visit **[whatsmyua.info](https://whatsmyua.info/)** — shown right at the top, under "Enter a user-agent string:".
+6. Open `Chaturdown.py` and set `USER_AGENT` near the top of the config section to that exact string:
+   ```python
+   USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ..."
+   ```
 
-If Cloudflare ever starts blocking requests, simply export fresh cookies from your browser and replace the file — no restart needed on the next poll cycle.
+**Important:** match the browser that *exported the cookies*, not the machine `Chaturdown.py` happens to be running on. If you exported cookies from Chrome on your everyday desktop but run Chaturdown somewhere else (a VM, a headless server, etc.), `USER_AGENT` should still describe that original Chrome — not the OS actually running the script.
+
+If Cloudflare ever starts blocking requests later, export a fresh cookies file from that same browser and replace `Chaturdown_Cookies.txt` — no restart needed, Chaturdown picks it up on the next poll cycle. If it's still blocked with fresh cookies and a correctly matching User-Agent, see [Proxy](https://github.com/reveler-hub/Chaturdown/wiki/Proxy) on the wiki — you may also need one.
 
 ### Add your models
 
@@ -147,10 +162,12 @@ DEFAULT_MODELS_RELOAD_INTERVAL  = 120    # used if models.txt doesn't set its ow
 
 POLL_MIN      = 60    # minimum seconds between live checks
 POLL_MAX      = 120   # maximum seconds between live checks
-STALL_TIMEOUT = 60    # seconds of yt-dlp silence before declaring a stall
+STALL_TIMEOUT = 180   # seconds of yt-dlp silence before declaring a stall
 ```
 
 (yt-dlp itself doesn't need configuring — Chaturdown finds it automatically: the copy installed into `Chaturdown_Venv` by setup, or a global install on PATH otherwise.)
+
+Everything above is all most people ever need to touch. There's a further set of optional, power-user settings — see [Advanced Mode](https://github.com/reveler-hub/Chaturdown/wiki/Advanced-Mode) on the wiki.
 
 ---
 
@@ -170,7 +187,7 @@ The TUI launches immediately:
 │  📡 CHATURBATE MULTI-DOWNLOADER TUI                          │
 │  ────────────────────────────────────────────────────────    │
 │                                                              │
-│  🟢 model_username_1  | Online  | ⏱️ 01:23:45 | 💾   1.2 GB │
+│  🟢 model_username_1  | Online  | ⏱️ 01:23:45 | 💾  1.2 GB   │
 │  🔴 model_username_2  | Offline                              │
 │                                                              │
 │  ────────────────────────────────────────────────────────    │
@@ -178,6 +195,12 @@ The TUI launches immediately:
 │  Press 'q' to stop the script.                               │
 └──────────────────────────────────────────────────────────────┘
 ```
+
+(On Windows this looks slightly different — plain-text labels like `Time:`/`Size:` and a colored `●` instead of emoji, since Windows' terminal support can't render most of them. Functionally identical either way; see the Windows screenshot above.)
+
+The mockup above is the single-column view (a narrow terminal, or a small `models.txt`). On a wide enough terminal, rooms automatically arrange into multiple side-by-side columns instead — no configuration needed, it just uses however much width is available. If a list is large enough to still overflow every column, a `(+N more not shown)` note appears in the footer rather than quietly dropping them.
+
+<img width="1885" height="914" alt="Multi_Column" src="https://github.com/user-attachments/assets/653c7c42-5b1a-4a79-abb4-f41eae944965" />
 
 Press `q` to stop all downloads and exit.
 
@@ -206,68 +229,29 @@ model_username_2
 
 **Note:** there's a small delay between saving the file and the change actually appearing — Chaturdown reads on a timer (`interval=N`), it doesn't watch the file live. A one- or few-second gap between the interval elapsing and the update showing up in the TUI is normal.
 
-**If `interval=...` or `stop_removed=...` shows up as a row in the TUI** (treated as a literal username instead of a setting), you're running an outdated copy of `Chaturdown.py` that predates that directive. Update to the latest version of the script — older versions only recognize directives that existed at the time, so a newer `models.txt` used with an older script will have unrecognized lines fall through and get treated as usernames.
+---
+
+## Proxy
+
+Most people don't need this — leave it blank and Chaturdown behaves exactly as before. Only needed if Chaturbate/Cloudflare still blocks your connection even with valid, fresh cookies and a correctly matching `USER_AGENT`.
+
+Full details, including the `PROXY` config option: see [Proxy](https://github.com/reveler-hub/Chaturdown/wiki/Proxy) on the wiki.
 
 ---
 
-## Proxy / User-Agent
+## Advanced Mode
 
-Most people don't need this — leave both settings blank and Chaturdown behaves exactly as before. This is only for cases where Chaturbate/Cloudflare blocks your connection even though your cookies are valid: a `403` error, a "Cloudflare blocked" status message, or similar.
+**You almost certainly don't need this.** Chaturdown works completely fine, indefinitely, on plain `models.txt` watching alone. A further set of optional, off-by-default settings exists for specific situations — watching enough rooms to hit rate limits, splitting long recordings, low disk space, custom filenames, extra dashboard info.
 
-This usually happens because of one or both of:
-- **Your network looks suspicious to Cloudflare** — common with certain VPNs, proxies, hosting/datacenter IPs, or connections from regions Cloudflare treats with extra scrutiny.
-- **Your requests don't look like they're coming from a real browser** — Chaturdown doesn't send a User-Agent by default, which combined with the above can be enough to get blocked.
-
-If you're running into this, open `Chaturdown.py` and fill in the `PROXY` and `USER_AGENT` values near the top of the config section:
-
-```python
-PROXY = ""       # e.g. "http://127.0.0.1:8080" or "socks5://127.0.0.1:1080"
-USER_AGENT = ""  # e.g. "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ..."
-```
-
-**Getting your User-Agent:** for best results, use the *exact* browser you used to export your cookies — Chaturbate can tie your session to it, so a mismatched or generic User-Agent may not help. Either of these works:
-
-1. Google: search **"what is my user agent"** and copy the string from under the AI-generated answer.
-2. Visit **[whatsmyua.info](https://whatsmyua.info/)** — your User-Agent is shown right at the top, under "Enter a user-agent string:".
-
-Both settings apply consistently to everything Chaturdown does — the live status checks and the actual yt-dlp download — so there's no risk of one working through the proxy while the other doesn't.
+Full details: see [Advanced Mode](https://github.com/reveler-hub/Chaturdown/wiki/Advanced-Mode) on the wiki.
 
 ---
 
 ## Running in the Background
 
-### tmux (recommended)
+For always-on use (servers, SBCs, etc.), run Chaturdown inside `tmux` or `screen` on Linux/macOS so it keeps running after you disconnect; on Windows, minimize the console window instead (see the wiki for the WSL option if you want true detach/reattach there too).
 
-```bash
-# Start a new named session
-tmux new-session -s chaturdown
-
-# Run the script inside it
-./Chaturdown.py
-
-# Detach and leave it running (Ctrl+B, then D)
-
-# Reattach later
-tmux attach -t chaturdown
-```
-
-### screen
-
-```bash
-screen -S chaturdown
-./Chaturdown.py
-
-# Detach (Ctrl+A, then D)
-
-# Reattach
-screen -r chaturdown
-```
-
-### Windows
-
-There's no native tmux/screen equivalent on Windows. Just launch Chaturdown normally (double-click `Chaturdown.py`, or run `Chaturdown_Venv\Scripts\python.exe Chaturdown.py`) and **minimize the console window** instead of closing it — it keeps running in the background while you're logged in.
-
-Note this isn't a true detach: closing that window, logging off, or rebooting stops it, unlike tmux/screen. If you specifically want real detach/reattach, run Chaturdown inside **WSL** (Windows Subsystem for Linux) instead and follow the tmux/screen instructions above — WSL is a real Linux environment, so both work normally there.
+Full details: see [Running in the Background](https://github.com/reveler-hub/Chaturdown/wiki/Running-in-the-Background) on the wiki.
 
 ---
 
@@ -295,19 +279,9 @@ chaturdown/
 
 ## Troubleshooting
 
-**`❌ No cookie file for Chaturbate found`** — Export your Chaturbate cookies from your browser and save them as `Chaturdown_Cookies.txt` in the same folder as the script (see [Add cookies](#add-cookies) above).
+**Status bar shows "Cloudflare blocked" / 403 Forbidden** — Almost always a missing or mismatched `USER_AGENT`: it's required, and must exactly match the browser you exported cookies from — not the OS actually running the script (see [Add cookies and set your User-Agent](#add-cookies-and-set-your-user-agent)). If it's already set correctly and the cookies are freshly exported, see [Proxy](https://github.com/reveler-hub/Chaturdown/wiki/Proxy) — you may also need one.
 
-**`❌ Error: No usernames found`** — Add at least one Chaturbate username to `models.txt`, one per line (see [Live Model List](#live-model-list)).
-
-**`interval=...` or `stop_removed=...` appears as a row in the TUI** — You're running an older version of `Chaturdown.py` that doesn't recognize that directive yet. Update the script to the latest version (see [Live Model List](#live-model-list)).
-
-**Status bar shows "Cloudflare blocked"** — Session cookies have expired. Export fresh cookies from your browser, replace `Chaturdown_Cookies.txt`, and Chaturdown will pick them up on the next poll cycle. If fresh cookies still get blocked (common on certain VPNs/proxies or in some regions), see [Proxy / User-Agent](#proxy--user-agent).
-
-**TUI shows blank squares instead of emoji** — Run `sudo apt install fonts-noto-color-emoji && fc-cache -fv`, then restart your terminal.
-
-**`ffmpeg not found` or no audio in recordings** — ffmpeg must be a system package, not a pip install. Install it with your OS's package manager (see [Installation](#installation)) and verify with `ffmpeg -version`.
-
-**Downloads stall immediately** — yt-dlp may be outdated. On Linux/macOS, activate the venv (`source Chaturdown_Venv/bin/activate`) and run `pip install --upgrade yt-dlp`; on Windows, run `Chaturdown_Venv\Scripts\pip install --upgrade yt-dlp`. Alternatively, set `YTDLP_UPDATE_INTERVAL` in the config to have Chaturdown handle this automatically.
+For every other error message (missing cookie file, no usernames found, blank emoji squares, ffmpeg not found, stalled downloads, etc.): see [Troubleshooting](https://github.com/reveler-hub/Chaturdown/wiki/Troubleshooting) on the wiki.
 
 ---
 
