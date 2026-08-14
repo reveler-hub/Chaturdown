@@ -92,7 +92,9 @@ def resolve_hls_url(username: str, cookies_file, user_agent, proxies=None) -> tu
     cookies = None
     if cookies_file:
         jar = requests.cookies.RequestsCookieJar()
-        for line in open(cookies_file).read().splitlines():
+        with open(cookies_file) as f:
+            cookie_lines = f.read().splitlines()
+        for line in cookie_lines:
             if not line.strip() or line.startswith("#"):
                 continue
             parts = line.split("\t")
@@ -147,7 +149,7 @@ class TrackFetcher:
     verification + retry, writing raw bytes to a pipe in order."""
 
     def __init__(self, name: str, chunklist_url: str, pipe_path: str, proxies=None,
-                 role: str = None, username: str = None, cookies_file=None, user_agent=None):
+                 role: str | None = None, username: str | None = None, cookies_file=None, user_agent=None):
         self.name = name
         self.chunklist_url = chunklist_url
         self.pipe_path = pipe_path

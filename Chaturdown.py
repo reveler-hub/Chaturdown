@@ -258,7 +258,7 @@ ENABLE_NETWORK_LOG = False
 # END OF CONFIGURATION
 # ============================================================
 
-SCRIPT_VERSION = "V5.1"
+SCRIPT_VERSION = "V5.1.1"
 _GITHUB_RELEASES_API = "https://api.github.com/repos/reveler-hub/Chaturdown/releases/latest"
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -931,9 +931,9 @@ def _build_ytdlp_cmd(username: str, output_path: Path) -> list[str]:
         "--retries",             "5",
         "--no-part",
         "--downloader", "ffmpeg",
-        "--downloader-args", "ffmpeg_i:-fflags +genpts+igndts+discardcorrupt "
+        "--downloader-args", ("ffmpeg_i:-fflags +genpts+igndts+discardcorrupt "
                               "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 "
-                              "-http_persistent 1 -http_multiple 0 -seg_max_retry 5",
+                              "-http_persistent 1 -http_multiple 0 -seg_max_retry 5"),
         "--downloader-args", "ffmpeg:-fps_mode cfr -af aresample=async=1 -c:v copy -c:a aac -copyts -avoid_negative_ts make_zero",
     ]
     if COOKIES_FILE.exists():
@@ -1215,7 +1215,6 @@ def _shutdown_active_downloads() -> None:
     print("All downloads stopped.")
 
 def watch_loop(usernames: list[str]):
-    global CB_USERNAMES, MODELS_RELOAD_INTERVAL, STOP_REMOVED_DOWNLOADS
     attempt = 0
     last_models_check = time.time()
     auto_watched: set[str] = set()
